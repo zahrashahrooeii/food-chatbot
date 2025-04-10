@@ -1,5 +1,6 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -21,7 +22,21 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
-    """Register a new user and return auth token"""
+    """
+    Register a new user and return auth token.
+    
+    This endpoint allows new users to register with the system by providing
+    a username and password.
+    
+    Parameters:
+        username (string): Required. Unique username for the new account.
+        password (string): Required. Password for the new account.
+        
+    Returns:
+        token: Authentication token for the new user
+        user_id: ID of the newly created user
+        username: Username of the new user
+    """
     try:
         username = request.data.get('username')
         password = request.data.get('password')
@@ -53,7 +68,21 @@ def register_user(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_user(request):
-    """Login user and return auth token"""
+    """
+    Login user and return auth token.
+    
+    This endpoint authenticates existing users and returns a token 
+    for use in subsequent API calls.
+    
+    Parameters:
+        username (string): Required. The user's username.
+        password (string): Required. The user's password.
+        
+    Returns:
+        token: Authentication token for the user
+        user_id: ID of the user
+        username: Username of the user
+    """
     try:
         username = request.data.get('username')
         password = request.data.get('password')
@@ -236,9 +265,27 @@ def start_conversation(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def simulate_conversations(request):
-    """Simulate conversations between two ChatGPT instances"""
+    """
+    Simulate multiple conversations about food preferences.
+    
+    This endpoint simulates a specified number of conversations with 
+    randomized food preferences and dietary preferences.
+    
+    Authentication is required using either:
+    - Token Authentication: Include 'Authorization: Token <your-token>' in the headers
+    - Session Authentication: For browser-based sessions
+    
+    Parameters:
+        count (int, optional): Number of conversations to simulate (default: 100, max: 100)
+    
+    Returns:
+        successful: Number of successfully simulated conversations
+        failed: Number of failed conversations
+        sample_results: Sample of the generated conversations
+    """
     try:
         # Validate count parameter
         try:
@@ -328,9 +375,25 @@ def simulate_conversations(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def vegetarian_list(request):
-    """List vegetarian/vegan users and their food preferences"""
+    """
+    Get list of vegetarian/vegan users and their food preferences.
+    
+    This endpoint provides a list of conversations filtered by dietary preference.
+    
+    Authentication is required using either:
+    - Token Authentication: Include 'Authorization: Token <your-token>' in the headers
+    - Session Authentication: For browser-based sessions
+    
+    Parameters:
+        type (string, optional): Filter type - 'all', 'vegetarian', or 'vegan'. Default is 'all'.
+    
+    Returns:
+        count: Number of conversations in the result
+        conversations: List of conversations with dietary preferences and foods
+    """
     try:
         filter_type = request.query_params.get('type', 'all')
         
@@ -362,9 +425,29 @@ def vegetarian_list(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def analytics_dashboard(request):
-    """Get analytics dashboard data"""
+    """
+    Get analytics about food preferences and dietary choices.
+    
+    This endpoint provides aggregated analytics data about user preferences
+    over a specified time period.
+    
+    Authentication is required using either:
+    - Token Authentication: Include 'Authorization: Token <your-token>' in the headers
+    - Session Authentication: For browser-based sessions
+    
+    Parameters:
+        days (int, optional): Number of days to analyze. Default is 7 days.
+    
+    Returns:
+        total_conversations: Total number of conversations analyzed
+        vegetarian_percentage: Percentage of vegetarian preferences
+        vegan_percentage: Percentage of vegan preferences
+        top_foods: List of most popular foods with counts
+        food_categories: Distribution of food preferences by category
+    """
     # Get time range from query params or default to last 7 days
     days = int(request.GET.get('days', 7))
     start_date = datetime.now() - timedelta(days=days)

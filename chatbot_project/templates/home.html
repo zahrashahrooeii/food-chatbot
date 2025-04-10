@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #4e73df;
+            color: white;
+            font-weight: bold;
+            border-radius: 10px 10px 0 0;
+        }
+        .btn-primary {
+            background-color: #4e73df;
+            border-color: #4e73df;
+        }
+        .btn-primary:hover {
+            background-color: #2e59d9;
+            border-color: #2e59d9;
+        }
+        #chat-window {
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e3e6f0;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+        }
+        .user-message {
+            background-color: #e3e6f0;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .bot-message {
+            background-color: #4e73df;
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .token-display {
+            font-family: monospace;
+            word-break: break-all;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .response-container {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Food Chatbot</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/swagger/">API Documentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/">Admin</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <button id="login-btn" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+                    <span id="username-display" class="text-light align-self-center d-none">Welcome, <span id="username"></span></span>
+                    <button id="logout-btn" class="btn btn-outline-danger ms-2 d-none">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        Food Preference Chatbot
+                    </div>
+                    <div class="card-body">
+                        <p>This chatbot helps you discover food preferences. Start a conversation or run simulations to analyze food preference patterns.</p>
+                        
+                        <div id="chat-window" class="d-flex flex-column">
+                            <!-- Chat messages will appear here -->
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="input-group">
+                                <button id="start-chat-btn" class="btn btn-primary">Start New Conversation</button>
+                                <button id="simulate-btn" class="btn btn-success ms-2" disabled>Run Simulation</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="response-section" class="card d-none">
+                    <div class="card-header">
+                        Response Data
+                    </div>
+                    <div class="card-body">
+                        <pre id="response-data" class="response-container">No data yet</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Authentication Status
+                    </div>
+                    <div class="card-body">
+                        <div id="auth-status">
+                            <div class="alert alert-warning">You are not logged in. Please log in to access all features.</div>
+                        </div>
+                        <div id="token-container" class="d-none">
+                            <p><strong>Your API Token:</strong></p>
+                            <div id="token-display" class="token-display">Not authenticated</div>
+                            <p class="text-muted mt-2">Your token is stored securely in your browser session.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        Settings
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="simulation-count" class="form-label">Simulation Count:</label>
+                            <input type="number" id="simulation-count" class="form-control" value="100" min="1" max="1000">
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto-save-toggle">
+                            <label class="form-check-label" for="auto-save-toggle">Auto-save results</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="login-error" class="alert alert-danger d-none"></div>
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="username-input" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username-input" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password-input" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password-input" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in
+            const token = localStorage.getItem('authToken');
+            const username = localStorage.getItem('username');
+            if (token) {
+                updateUIForLoggedInUser(username, token);
+            }
+            
+            // Login form submission
+            document.getElementById('login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username-input').value;
+                const password = document.getElementById('password-input').value;
+                
+                fetch('/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Login failed. Please check your credentials.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Store token in localStorage
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('username', username);
+                    
+                    // Update UI
+                    updateUIForLoggedInUser(username, data.token);
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+                })
+                .catch(error => {
+                    document.getElementById('login-error').textContent = error.message;
+                    document.getElementById('login-error').classList.remove('d-none');
+                });
+            });
+            
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('username');
+                updateUIForLoggedOutUser();
+            });
+            
+            // Start chat button
+            document.getElementById('start-chat-btn').addEventListener('click', function() {
+                startNewConversation();
+            });
+            
+            // Simulate button
+            document.getElementById('simulate-btn').addEventListener('click', function() {
+                runSimulation();
+            });
+        });
+        
+        function updateUIForLoggedInUser(username, token) {
+            // Update navbar
+            document.getElementById('login-btn').classList.add('d-none');
+            document.getElementById('username-display').classList.remove('d-none');
+            document.getElementById('username').textContent = username;
+            document.getElementById('logout-btn').classList.remove('d-none');
+            
+            // Update auth status
+            document.getElementById('auth-status').innerHTML = '<div class="alert alert-success">You are logged in as ' + username + '</div>';
+            
+            // Show token
+            document.getElementById('token-container').classList.remove('d-none');
+            document.getElementById('token-display').textContent = token;
+            
+            // Enable simulation button
+            document.getElementById('simulate-btn').disabled = false;
+        }
+        
+        function updateUIForLoggedOutUser() {
+            // Update navbar
+            document.getElementById('login-btn').classList.remove('d-none');
+            document.getElementById('username-display').classList.add('d-none');
+            document.getElementById('logout-btn').classList.add('d-none');
+            
+            // Update auth status
+            document.getElementById('auth-status').innerHTML = '<div class="alert alert-warning">You are not logged in. Please log in to access all features.</div>';
+            
+            // Hide token
+            document.getElementById('token-container').classList.add('d-none');
+            
+            // Disable simulation button
+            document.getElementById('simulate-btn').disabled = true;
+        }
+        
+        function addMessageToChat(message, sender) {
+            const chatWindow = document.getElementById('chat-window');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+            messageElement.textContent = message;
+            chatWindow.appendChild(messageElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+        
+        function startNewConversation() {
+            addMessageToChat("Starting a new conversation...", "user");
+            
+            fetch('/api/chat/start/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the bot's response
+                const foodList = data.response.foods.join(", ");
+                const isVeg = data.response.is_vegetarian ? "Yes" : "No";
+                const isVegan = data.response.is_vegan ? "Yes" : "No";
+                
+                addMessageToChat(`What are your favorite foods?`, "bot");
+                addMessageToChat(`My favorite foods are: ${foodList}`, "user");
+                addMessageToChat(`Am I vegetarian? ${isVeg}. Am I vegan? ${isVegan}`, "user");
+                
+                // Display raw response data
+                displayResponseData(data);
+            })
+            .catch(error => {
+                addMessageToChat("Error: " + error.message, "bot");
+            });
+        }
+        
+        function runSimulation() {
+            const count = document.getElementById('simulation-count').value;
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                addMessageToChat("Please log in to run simulations", "bot");
+                return;
+            }
+            
+            addMessageToChat(`Running ${count} simulations...`, "user");
+            
+            fetch('/api/chat/simulate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Token ' + token
+                },
+                body: JSON.stringify({
+                    count: parseInt(count)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessageToChat(`Successfully completed ${data.successful} simulations!`, "bot");
+                
+                // Display raw response data
+                displayResponseData(data);
+            })
+            .catch(error => {
+                addMessageToChat("Error: " + error.message, "bot");
+            });
+        }
+        
+        function displayResponseData(data) {
+            const responseSection = document.getElementById('response-section');
+            const responseData = document.getElementById('response-data');
+            
+            responseSection.classList.remove('d-none');
+            responseData.textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html> 
