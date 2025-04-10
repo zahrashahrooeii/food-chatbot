@@ -1,0 +1,13 @@
+name: food-chatbot
+services:
+  - name: food-chatbot-service
+    project: .
+    language: python
+    host: appservice
+    env:
+      - name: WEBSITES_PORT
+        value: 8000
+      - name: OPENAI_API_KEY
+        value: "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"
+      - name: DJANGO_SETTINGS_MODULE
+        value: "chatbot_project.settings" 

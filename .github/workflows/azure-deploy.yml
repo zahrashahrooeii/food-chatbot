@@ -1,0 +1,77 @@
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: food-chatbot
+  PYTHON_VERSION: '3.12'
+  WORKING_DIRECTORY: '.'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: List files after checkout
+      run: |
+        ls -la
+        pwd
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Create and start virtual environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip list
+        
+    - name: Verify project structure
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Directory contents:"
+        ls -R
+        echo "Python path:"
+        which python
+        echo "Django version:"
+        python -m django --version
+        
+    - name: Collect static files
+      run: |
+        python manage.py collectstatic --noinput
+      env:
+        DJANGO_SETTINGS_MODULE: chatbot_project.production
+        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: .
+      env:
+        DJANGO_SETTINGS_MODULE: chatbot_project.production
+        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    - name: Post-deployment verification
+      run: |
+        echo "Deployment completed. Verify these settings in Azure:"
+        echo "1. Check Application Settings in Azure Portal"
+        echo "2. Verify startup command is set to: bash startup.sh"
+        echo "3. Ensure Python version matches: ${{ env.PYTHON_VERSION }}" 
