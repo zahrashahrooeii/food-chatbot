@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-# AI-Powered Food Chatbot API
+# Food Chatbot API
 
 A sophisticated Django REST API that leverages OpenAI's GPT models to provide personalized food recommendations and analytics. This project demonstrates modern API development practices, AI integration, and data analysis capabilities.
 
@@ -55,7 +54,7 @@ pip install -r requirements.txt
 4. Set up environment variables:
 ```bash
 cp .env.example .env
-# Edit .env with your OpenAI API key
+# Edit .env with your API key
 ```
 
 5. Run migrations:
@@ -137,6 +136,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Zahra Shahrooeii
 - GitHub: [zahrashahrooeii](https://github.com/zahrashahrooeii)
-=======
-# food-chatbot-task
->>>>>>> 39e46d06b2ff27518ddb5efbbf235360b1b140e9

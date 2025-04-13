@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from collections import Counter
 from rest_framework.reverse import reverse
 import random
+import logging
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -269,24 +270,16 @@ def start_conversation(request):
 @permission_classes([IsAuthenticated])
 def simulate_conversations(request):
     """
-    Simulate multiple conversations about food preferences.
-    
-    This endpoint simulates a specified number of conversations with 
-    randomized food preferences and dietary preferences.
-    
-    Authentication is required using either:
-    - Token Authentication: Include 'Authorization: Token <your-token>' in the headers
-    - Session Authentication: For browser-based sessions
-    
-    Parameters:
-        count (int, optional): Number of conversations to simulate (default: 100, max: 100)
-    
-    Returns:
-        successful: Number of successfully simulated conversations
-        failed: Number of failed conversations
-        sample_results: Sample of the generated conversations
+    Simulate multiple conversations between two ChatGPT instances about food preferences.
     """
     try:
+        # Cleanup old conversations first
+        try:
+            Conversation.objects.all().delete()
+            logging.info("Cleaned up old conversations")
+        except Exception as e:
+            logging.error(f"Error cleaning up old conversations: {str(e)}")
+
         # Validate count parameter
         try:
             count = int(request.data.get('count', 100))
@@ -300,79 +293,144 @@ def simulate_conversations(request):
                 "error": "Invalid count parameter"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        successful = 0
-        failed = 0
-        results = []
-        
-        # Mock food combinations
+        # Pre-defined diverse food combinations
         food_combinations = [
             {
-                "foods": ["vegan pizza", "tofu stir-fry", "avocado toast"],
+                "foods": ["Margherita Pizza", "Caesar Salad", "Tiramisu"],
                 "is_vegetarian": True,
-                "is_vegan": True
+                "is_vegan": False,
+                "explanation": "I love Italian cuisine with a mix of savory and sweet."
             },
             {
-                "foods": ["spaghetti", "vegan burgers", "fruit salad"],
+                "foods": ["Tofu Stir-fry", "Quinoa Bowl", "Vegan Ice Cream"],
                 "is_vegetarian": True,
-                "is_vegan": False
+                "is_vegan": True,
+                "explanation": "Plant-based foods that are both healthy and delicious."
             },
             {
-                "foods": ["sushi", "ramen", "chocolate cake"],
+                "foods": ["Grilled Salmon", "Greek Salad", "Dark Chocolate"],
                 "is_vegetarian": False,
-                "is_vegan": False
+                "is_vegan": False,
+                "explanation": "A balanced combination of protein, fresh vegetables, and a sweet treat."
             },
             {
-                "foods": ["falafel", "hummus", "pita bread"],
+                "foods": ["Falafel Wrap", "Hummus", "Baklava"],
                 "is_vegetarian": True,
-                "is_vegan": True
+                "is_vegan": True,
+                "explanation": "Middle Eastern cuisine offers amazing vegetarian options."
             },
             {
-                "foods": ["tacos", "burritos", "nachos"],
+                "foods": ["Sushi Rolls", "Miso Soup", "Green Tea Ice Cream"],
                 "is_vegetarian": False,
-                "is_vegan": False
+                "is_vegan": False,
+                "explanation": "Japanese cuisine provides a perfect balance of flavors."
+            },
+            {
+                "foods": ["Black Bean Burrito", "Guacamole", "Churros"],
+                "is_vegetarian": True,
+                "is_vegan": True,
+                "explanation": "Mexican food with a vegetarian twist."
+            },
+            {
+                "foods": ["Pad Thai", "Spring Rolls", "Mango Sticky Rice"],
+                "is_vegetarian": False,
+                "is_vegan": False,
+                "explanation": "Thai food offers an exciting mix of sweet and savory."
+            },
+            {
+                "foods": ["Mushroom Risotto", "Caprese Salad", "Panna Cotta"],
+                "is_vegetarian": True,
+                "is_vegan": False,
+                "explanation": "Classic Italian vegetarian dishes that are rich in flavor."
+            },
+            {
+                "foods": ["Beyond Burger", "Sweet Potato Fries", "Coconut Sorbet"],
+                "is_vegetarian": True,
+                "is_vegan": True,
+                "explanation": "Modern vegan alternatives that are just as satisfying."
+            },
+            {
+                "foods": ["Chicken Tikka Masala", "Naan Bread", "Mango Lassi"],
+                "is_vegetarian": False,
+                "is_vegan": False,
+                "explanation": "Indian cuisine with a perfect blend of spices."
             }
         ]
+
+        # Bulk create conversations and preferences
+        conversations = []
+        food_preferences = []
+        results = []
         
         for i in range(count):
-            try:
-                # Generate mock data
-                response_data = random.choice(food_combinations)
+            # Get random food combination
+            response_data = random.choice(food_combinations)
+            
+            # Create conversation object
+            conversation = Conversation(
+                is_vegetarian=response_data['is_vegetarian'],
+                is_vegan=response_data['is_vegan']
+            )
+            conversations.append(conversation)
+            
+            # Store result
+            results.append({
+                "foods": response_data['foods'],
+                "is_vegetarian": response_data['is_vegetarian'],
+                "is_vegan": response_data['is_vegan'],
+                "explanation": response_data['explanation']
+            })
 
-                conversation = Conversation.objects.create(
-                    is_vegetarian=response_data.get('is_vegetarian', False),
-                    is_vegan=response_data.get('is_vegan', False)
-                )
-
-                for food in response_data.get('foods', []):
-                    FoodPreference.objects.create(
+        # Bulk create conversations
+        created_conversations = Conversation.objects.bulk_create(conversations)
+        
+        # Create food preferences
+        for idx, conversation in enumerate(created_conversations):
+            response_data = results[idx]
+            for food in response_data['foods']:
+                food_preferences.append(
+                    FoodPreference(
                         conversation=conversation,
                         food_name=food
                     )
-
-                successful += 1
-                results.append({
-                    "conversation_id": conversation.id,
-                    "foods": response_data.get('foods'),
-                    "is_vegetarian": response_data.get('is_vegetarian', False),
-                    "is_vegan": response_data.get('is_vegan', False)
-                })
-
-            except Exception as e:
-                failed += 1
-                print(f"Error in conversation {i+1}: {str(e)}")
-                continue
-
+                )
+        
+        # Bulk create food preferences
+        FoodPreference.objects.bulk_create(food_preferences)
+        
+        # Calculate statistics
+        total_vegetarian = sum(1 for r in results if r['is_vegetarian'])
+        total_vegan = sum(1 for r in results if r['is_vegan'])
+        
         return Response({
-            "message": f"Completed {successful} out of {count} conversations",
-            "successful": successful,
-            "failed": failed,
+            "message": f"Successfully simulated {count} conversations",
+            "statistics": {
+                "total_conversations": count,
+                "vegetarian_percentage": round((total_vegetarian / count * 100), 2),
+                "vegan_percentage": round((total_vegan / count * 100), 2)
+            },
             "results": results[:5]  # Return first 5 results as sample
         })
+        
     except Exception as e:
+        logging.error(f"Simulation error: {str(e)}")
         return Response({
             "error": str(e),
             "note": "An error occurred during simulation."
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+def cleanup_old_conversations():
+    """Clean up old conversations to prevent database bloat"""
+    try:
+        total_count = Conversation.objects.count()
+        if total_count > 1000:  # Keep maximum 1000 conversations
+            # Delete oldest conversations
+            conversations_to_delete = Conversation.objects.order_by('created_at')[:total_count-1000]
+            deleted_count = conversations_to_delete.delete()[0]
+            logging.info(f"Cleaned up {deleted_count} old conversations")
+    except Exception as e:
+        logging.error(f"Error during cleanup: {str(e)}")
+        # Don't raise the error - cleanup is not critical
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
@@ -684,4 +742,5 @@ def token_debug(request):
             "headers": headers
         }, status=status.HTTP_401_UNAUTHORIZED)
 
+# Websocket for real-time chat will be implemented separately
 # Websocket for real-time chat will be implemented separately

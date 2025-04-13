@@ -29,9 +29,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Add whitenoise middleware at the top
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
-# OpenAI settings
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-
 # CORS settings - restrict to Azure domain in production
 CORS_ALLOWED_ORIGINS = [
     "https://food-chatbot.azurewebsites.net",

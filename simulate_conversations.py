@@ -20,7 +20,7 @@ def simulate_conversations(count=100):
     
     for _ in range(count):
         try:
-            # ChatGPT A asks the question
+            # Ask the question
             question = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -29,7 +29,7 @@ def simulate_conversations(count=100):
                 ]
             )
 
-            # ChatGPT B answers with food preferences
+            # Answer with food preferences
             answer = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[

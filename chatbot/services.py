@@ -40,38 +40,44 @@ class ChatbotService:
             logging.warning("No valid OpenAI API key found, using mock responses")
         logging.info(f"Using {'mock' if self.use_mock else 'real'} OpenAI service")
 
-    def ask_food_preferences(self):
-        prompt = "What are your top 3 favourite foods?"
-
+    def ask_food_preferences(self, user_message=None):
         try:
             logging.info("Sending request to OpenAI API...")
             
             if self.use_mock:
                 # Use mock response instead of real API
                 time.sleep(0.5)  # Simulate API delay
-                mock_response = """
-                {
-                    "foods": ["pizza", "sushi", "chocolate cake"],
-                    "is_vegetarian": false,
-                    "is_vegan": false
-                }
-                """
-                response = MockOpenAIResponse(mock_response)
+                if not user_message:
+                    return {
+                        "reply": "What are your 3 favorite foods? Feel free to tell me about them and why you like them!"
+                    }
+                else:
+                    return {
+                        "reply": "Thanks for sharing! Those sound like delicious choices. Would you like to tell me more about why you enjoy these foods?"
+                    }
             else:
                 # Use real OpenAI API
+                messages = [
+                    {"role": "system", "content": """You are a friendly food chatbot having a conversation about favorite foods.
+                    If the user hasn't provided their favorite foods yet, ask them what their 3 favorite foods are in a friendly way.
+                    If they have shared their foods, respond naturally and ask follow-up questions about why they like those foods.
+                    Keep the conversation natural and engaging."""},
+                ]
+                
+                if user_message:
+                    messages.append({"role": "user", "content": user_message})
+                else:
+                    messages.append({"role": "user", "content": "Start the conversation about favorite foods"})
+                
                 response = self.client.chat.completions.create(
                     model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a friendly food chatbot."},
-                        {"role": "user", "content": prompt}
-                    ],
+                    messages=messages,
                     temperature=0.7,
-                    max_tokens=100,
+                    max_tokens=150,
                 )
             
-            logging.info("Received response from OpenAI API.")
-            answer = response.choices[0].message.content.strip()
-            return {"question": prompt, "answer": answer}
+                logging.info("Received response from OpenAI API.")
+                return {"reply": response.choices[0].message.content.strip()}
 
         except OpenAIError as e:
             logging.error(f"OpenAI API error: {str(e)}")
@@ -95,10 +101,10 @@ class ChatbotService:
                     # Use mock responses
                     time.sleep(0.1)  # Simulate API delay
                     
-                    # Step 4.1: ChatGPT A asks the question (mocked)
+                    # Step 4.1: Ask the question (mocked)
                     question = "What are your top 3 favorite foods?"
                     
-                    # Step 4.2: ChatGPT B answers with random preferences (mocked)
+                    # Step 4.2: Answer with random preferences (mocked)
                     mock_data = self._generate_mock_food_data()
                     results.append({
                         "conversation_id": i + 1,
@@ -109,7 +115,7 @@ class ChatbotService:
                         "is_vegan": mock_data.get('is_vegan', False)
                     })
                 else:
-                    # Step 4.1: ChatGPT A asks the question
+                    # Step 4.1: Ask the question
                     chatgpt_a_response = self.client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
@@ -122,7 +128,7 @@ class ChatbotService:
                     question = chatgpt_a_response.choices[0].message.content.strip()
                     logging.info(f"ChatGPT A asked: {question}")
                     
-                    # Step 4.2: ChatGPT B answers with random preferences
+                    # Step 4.2: Answer with random preferences
                     chatgpt_b_response = self.client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
@@ -136,7 +142,7 @@ class ChatbotService:
                     answer = chatgpt_b_response.choices[0].message.content.strip()
                     logging.info(f"ChatGPT B answered: {answer}")
                     
-                    # Parse the response from ChatGPT B
+                    # Parse the response
                     try:
                         response_data = json.loads(answer)
                         # Validate the response data

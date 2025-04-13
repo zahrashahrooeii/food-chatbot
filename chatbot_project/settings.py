@@ -45,12 +45,13 @@ INSTALLED_APPS = [
     'rest_framework',  # Required for API functionality
     'rest_framework.authtoken',
     'corsheaders',
-    'drf_yasg',  # Required for Swagger documentation
+    'drf_yasg',  # Re-enabled for Swagger documentation
     'food_api',
     'chatbot',  # Ensure the chatbot app is registered  
 ]
 
 MIDDLEWARE = [
+    'chatbot_project.middleware.PatchingMiddleware',  # New comprehensive patching middleware
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -127,24 +128,34 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Authentication settings
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'chat'
+LOGOUT_REDIRECT_URL = 'home'
+
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
+# REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Temporarily allow public access for testing
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 
@@ -156,11 +167,14 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_AGE = 86400  # 1 day in seconds
 SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 
-# OpenAI settings
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# Load the OpenAI API key from environment variables
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-# Log the OpenAI API key loading status
+# Log the API key loading status
 if not OPENAI_API_KEY:
-    logging.warning("OpenAI API key is not set. Please check your .env file.")
-else:
-    logging.info("OpenAI API key loaded successfully.")
+    logging.warning("OpenAI API key is not set. Please check your environment variables.")
+
+# CSRF settings - add these at the end of the file
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the cookie
