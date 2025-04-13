@@ -19,18 +19,17 @@ def register_view(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user) # Log in the user automatically after registration
-            messages.success(request, 'Registration successful! You are now logged in.')
-            return redirect('chat') # Redirect to chat page after successful registration
+            login(request, user)
+            messages.success(request, 'Registration successful! Welcome to Food Chatbot!')
+            return redirect('chat')
         else:
-            # If form is invalid, re-render home page with errors
-            login_form = AuthenticationForm() # Provide login form as well
             messages.error(request, 'Registration failed. Please correct the errors below.')
-            # Add form with errors to context
-            return render(request, 'home.html', {'register_form': form, 'login_form': login_form})
-    else:
-        # If GET request, redirect to home page where the form is displayed
-        return redirect('home')
+            login_form = AuthenticationForm()
+            return render(request, 'home.html', {
+                'register_form': form,
+                'login_form': login_form
+            })
+    return redirect('home')
 
 def login_view(request):
     if request.method == 'POST':
@@ -65,7 +64,10 @@ def logout_view(request):
 
 @login_required # Ensure only logged-in users can access chat
 def chat_view(request):
-    # Placeholder for the chat page logic
-    return render(request, 'chat.html')
+    if not request.user.is_authenticated:
+        return redirect('login')
+    return render(request, 'chat.html', {
+        'user': request.user
+    })
 
 # You might have other views here already, keep them 

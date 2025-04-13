@@ -8,6 +8,7 @@ from drf_yasg import openapi
 from rest_framework import permissions
 from . import views
 from django.contrib.auth import views as auth_views
+from django.shortcuts import redirect
 
 # Re-enable schema_view definition
 schema_view = get_schema_view(
@@ -38,19 +39,20 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     # API URLs
-    path('api/food/', include('food_api.urls')), # Keep your food API urls
-    path('api/chat/', include('chatbot.urls')),  # Keep your chatbot API urls
+    path('api/food/', include('food_api.urls')), 
+    path('api/chat/', include('chatbot.urls')),  
 
-    # Frontend/Authentication URLs using chatbot_project.views
+    # Frontend/Authentication URLs
     path('', views.home_view, name='home'),
     path('register/', views.register_view, name='register'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('chat/', views.chat_view, name='chat'), # Placeholder for chat UI page
-
-    # Authentication URLs
-    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('chat/', views.chat_view, name='chat'),
+    
+    # Authentication URLs with proper redirects
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html', next_page='chat'), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html', next_page='chat'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('login/chat/', lambda request: redirect('chat'), name='login_chat_redirect'),
 
     # Re-enable Swagger documentation URLs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
