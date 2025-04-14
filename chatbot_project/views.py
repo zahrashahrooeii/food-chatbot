@@ -37,25 +37,22 @@ def login_view(request):
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
+            user = authenticate(request, username=username, password=password) # Pass request to authenticate
             if user is not None:
                 login(request, user)
                 messages.info(request, f'Welcome back, {username}!')
-                # Redirect to a success page, e.g., the chat page or intended page
-                next_url = request.POST.get('next', 'chat') # Get next page or default to chat
-                return redirect(next_url)
+                next_url = request.POST.get('next')
+                return redirect(next_url or 'chat') # Redirect to next or default to chat
             else:
-                 messages.error(request, 'Invalid username or password.')
+                messages.error(request, 'Invalid username or password.')
         else:
-            # Form is invalid
             messages.error(request, 'Invalid username or password. Please check your input.')
-        # If login fails or form invalid, re-render home page with error message
-        register_form = UserCreationForm() # Provide register form as well
-        # Pass the invalid login form back to display errors
-        return render(request, 'home.html', {'register_form': register_form, 'login_form': form})
+        # If login fails or form invalid, re-render the login page with the form containing errors
+        return render(request, 'registration/login.html', {'form': form})
     else:
-        # If GET request, redirect to home page where the form is displayed
-        return redirect('home')
+        # For GET requests, display the login form
+        form = AuthenticationForm()
+        return render(request, 'registration/login.html', {'form': form})
 
 def logout_view(request):
     logout(request)
