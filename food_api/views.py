@@ -434,16 +434,14 @@ def cleanup_old_conversations():
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def vegetarian_list(request):
     """
     Get list of vegetarian/vegan users and their food preferences.
     
     This endpoint provides a list of conversations filtered by dietary preference.
     
-    Authentication is required using either:
-    - Token Authentication: Include 'Authorization: Token <your-token>' in the headers
-    - Session Authentication: For browser-based sessions
+    Authentication is no longer required.
     
     Parameters:
         type (string, optional): Filter type - 'all', 'vegetarian', or 'vegan'. Default is 'all'.
