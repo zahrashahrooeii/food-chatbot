@@ -55,6 +55,20 @@ class ChatbotService:
                     # Analyze the user's message to provide more contextual responses
                     message_lower = user_message.lower()
                     
+                    # Check for repeated words or non-food inputs
+                    words = message_lower.split()
+                    if len(words) > 1 and all(word == words[0] for word in words):
+                        return {
+                            "reply": "I notice you're repeating the same word. I'm here to talk about food preferences. Could you tell me about your favorite foods instead?"
+                        }
+                    
+                    # Check if the message contains common non-food items
+                    non_food_items = ['stone', 'rock', 'wall', 'grenade', 'brick', 'metal', 'plastic']
+                    if any(item in message_lower for item in non_food_items):
+                        return {
+                            "reply": "I notice you mentioned something that doesn't seem like food. I'm here to discuss food preferences. Could you tell me about your favorite foods instead?"
+                        }
+                    
                     # Check if the message mentions specific foods
                     if any(food in message_lower for food in ["pizza", "burger", "pasta", "sushi", "rice", "noodles", "chicken", "fish"]):
                         responses = [
